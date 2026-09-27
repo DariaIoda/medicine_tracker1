@@ -59,12 +59,50 @@ class _HomeViewState extends State<HomeView> {
                   itemCount: filteredList.length,
                   itemBuilder: (context, index) {
                     final med = filteredList[index];
-                    return ListTile(
-                      title: Text(med.name),
-                      subtitle: Text('Форма: ${med.form} | Остаток: ${med.quantity} шт.'),
-                      trailing: Text(med.expiryDate.toString().split(' ')[0]),
-                      onLongPress: () => _viewModel.deleteMedicine(med.id),
-                    );
+                    return // Внутри ListView.builder в home_view.dart:
+                      ListTile(
+                        title: Text(med.name),
+                        subtitle: Text('Форма: ${med.form} | Остаток: ${med.quantity} шт.\nИнструкция: ${med.instructions}'),
+                        isThreeLine: true,
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            // Диалог подтверждения удаления
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Удаление препарата'),
+                                content: Text('Вы действительно хотите удалить "${med.name}"?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('Отмена'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      _viewModel.deleteMedicine(med.id);
+                                      Navigator.pop(ctx);
+                                    },
+                                    child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        onTap: () {
+                          // Нажатие на карточку открывает экран редактирования
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddMedicineView(
+                                viewModel: _viewModel,
+                                medicineToEdit: med,
+                              ),
+                            ),
+                          );
+                        },
+                      );
                   },
                 ),
               ),

@@ -4,8 +4,9 @@ import '../viewmodels/medicine_viewmodel.dart';
 
 class AddMedicineView extends StatefulWidget {
   final MedicineViewModel viewModel;
+  final Medicine? medicineToEdit; // Если передан — режим редактирования
 
-  const AddMedicineView({super.key, required this.viewModel});
+  const AddMedicineView({super.key, required this.viewModel, this.medicineToEdit});
 
   @override
   State<AddMedicineView> createState() => _AddMedicineViewState();
@@ -14,19 +15,33 @@ class AddMedicineView extends StatefulWidget {
 class _AddMedicineViewState extends State<AddMedicineView> {
   final _formKey = GlobalKey<FormState>();
   
-  // Поля формы
-  String _name = '';
-  int _quantity = 10;
-  String _dosage = '500 мг';
-  String _form = 'таблетки'; // 'таблетки' или 'сиропы'
-  String _instructions = 'Принимать после еды';
-  DateTime _expiryDate = DateTime.now().add(const Duration(days: 180));
+  late String _name;
+  late int _quantity;
+  late String _dosage;
+  late String _form;
+  late String _instructions;
+  late DateTime _expiryDate;
+
+  @override
+  void initState() {
+    super.initState();
+    // Инициализируем поля (если редактируем — старыми данными, если новый — пустыми)
+    final med = widget.medicineToEdit;
+    _name = med?.name ?? '';
+    _quantity = med?.quantity ?? 10;
+    _dosage = med?.dosage ?? '500 мг';
+    _form = med?.form ?? 'таблетки';
+    _instructions = med?.instructions ?? 'Принимать после еды';
+    _expiryDate = med?.expiryDate ?? DateTime.now().add(const Duration(days: 180));
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bool isEditing = widget.medicineToEdit != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Добавление лекарства (Сканер / Ввод)'),
+        title: Text(isEditing ? 'Редактировать препарат' : 'Добавить препарат'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -34,26 +49,25 @@ class _AddMedicineViewState extends State<AddMedicineView> {
           key: _formKey,
           child: ListView(
             children: [
-              // Кнопка имитации сканирования камеры (Требование Варианта 11)
-              ElevatedButton.icon(
-                onPressed: () {
-                  // Имитируем успешное сканирование упаковки камерой
-                  setState(() {
-                    _name = 'Аспирин';
-                    _dosage = '500мг';
-                    _form = 'таблетки';
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Камера распознала: Аспирин')),
-                  );
-                },
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Сканировать название с упаковки (Mock)'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[50]),
-              ),
-              const SizedBox(height: 20),
+              if (!isEditing) ...[
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _name = 'Аспирин';
+                      _dosage = '500мг';
+                      _form = 'таблетки';
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Камера распознала: Аспирин')),
+                    );
+                  },
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Сканировать название с упаковки (Mock)'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[50]),
+                ),
+                const SizedBox(height: 20),
+              ],
               
-              // Поле названия
               TextFormField(
                 initialValue: _name,
                 decoration: const InputDecoration(labelText: 'Коммерческое название препарата', border: OutlineInputBorder()),
@@ -62,7 +76,6 @@ class _AddMedicineViewState extends State<AddMedicineView> {
               ),
               const SizedBox(height: 15),
 
-              // Поле дозировки
               TextFormField(
                 initialValue: _dosage,
                 decoration: const InputDecoration(labelText: 'Дозировка (например, 500мг)', border: OutlineInputBorder()),
@@ -70,7 +83,6 @@ class _AddMedicineViewState extends State<AddMedicineView> {
               ),
               const SizedBox(height: 15),
 
-              // Выбор формы выпуска
               DropdownButtonFormField<String>(
                 value: _form,
                 decoration: const InputDecoration(labelText: 'Форма выпуска', border: OutlineInputBorder()),
@@ -81,7 +93,6 @@ class _AddMedicineViewState extends State<AddMedicineView> {
               ),
               const SizedBox(height: 15),
 
-              // Количество
               TextFormField(
                 initialValue: _quantity.toString(),
                 keyboardType: TextInputType.number,
@@ -90,7 +101,6 @@ class _AddMedicineViewState extends State<AddMedicineView> {
               ),
               const SizedBox(height: 15),
 
-              // Инструкция
               TextFormField(
                 initialValue: _instructions,
                 decoration: const InputDecoration(labelText: 'Правила приема / инструкция', border: OutlineInputBorder()),
@@ -98,41 +108,57 @@ class _AddMedicineViewState extends State<AddMedicineView> {
               ),
               const SizedBox(height: 25),
 
-              // Кнопка сохранения
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    final newMed = Medicine(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      name: _name,
-                      quantity: _quantity,
-                      dosage: _dosage,
-                      form: _form,
-                      expiryDate: _expiryDate,
-                      instructions: _instructions,
-                    );
-
-                    // Проводим через валидатор несовместимости ( Combine-подобный поток )
-                    bool success = widget.viewModel.validateAndAddMedicine(newMed);
-
-                    if (success) {
-                      Navigator.pop(context); // Возвращаемся на главный экран
+                    if (isEditing) {
+                      // Режим обновления
+                      final updatedMed = Medicine(
+                        id: widget.medicineToEdit!.id,
+                        name: _name,
+                        quantity: _quantity,
+                        dosage: _dosage,
+                        form: _form,
+                        expiryDate: _expiryDate,
+                        instructions: _instructions,
+                      );
+                      widget.viewModel.updateMedicine(updatedMed);
+                      Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Препарат успешно добавлен в аптечку!')),
+                        const SnackBar(content: Text('Препарат успешно изменен!')),
                       );
                     } else {
-                      // Ошибка конфликта показана во ViewModel, выводим диалог или снекбар
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(widget.viewModel.warningMessage ?? 'Ошибка конфликта препаратов!'),
-                          backgroundColor: Colors.red,
-                        ),
+                      // Режим создания нового
+                      final newMed = Medicine(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        name: _name,
+                        quantity: _quantity,
+                        dosage: _dosage,
+                        form: _form,
+                        expiryDate: _expiryDate,
+                        instructions: _instructions,
                       );
+
+                      bool success = widget.viewModel.validateAndAddMedicine(newMed);
+
+                      if (success) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Препарат успешно добавлен в аптечку!')),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(widget.viewModel.warningMessage ?? 'Ошибка конфликта препаратов!'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   }
                 },
-                child: const Text('Сохранить и проверить совместимость'),
+                child: Text(isEditing ? 'Сохранить изменения' : 'Сохранить и проверить совместимость'),
               ),
             ],
           ),

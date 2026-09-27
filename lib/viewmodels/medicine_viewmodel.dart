@@ -98,4 +98,14 @@ class MedicineViewModel extends ChangeNotifier {
     _saveMedicines(); // Сохраняем изменения на диск
     notifyListeners();
   }
+
+  // Редактирование существующего препарата
+  void updateMedicine(Medicine updatedMed) {
+    final index = _medicines.indexWhere((m) => m.id == updatedMed.id);
+    if (index != -1) {
+      _medicines[index] = updatedMed;
+      _saveMedicines();
+      notifyListeners();
+    }
+  }
 }
