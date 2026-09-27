@@ -7,7 +7,7 @@ void main() {
 }
 
 class MedicineTrackerApp extends StatelessWidget {
-  const MedicineTrackerApp({Key? key}) : super(key: key);
+  const MedicineTrackerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
