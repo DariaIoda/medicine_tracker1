@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/medicine.dart';
 
 class MedicineViewModel extends ChangeNotifier {
@@ -11,22 +12,57 @@ class MedicineViewModel extends ChangeNotifier {
   List<Medicine> get medicines => _medicines;
   String? get warningMessage => _warningMessage;
 
-  // Загрузка JSON-матрицы несовместимости (Лаб. работа №3)
+  MedicineViewModel() {
+    loadData();
+  }
+
+  // Комплексная инициализация при старте приложения
+  Future<void> loadData() async {
+    await loadInteractions();
+    await loadMedicines();
+  }
+
+  // 1. Загрузка матрицы несовместимости из статического JSON-файла (Лаб. работа №3)
   Future<void> loadInteractions() async {
     try {
       final String response = await rootBundle.loadString('assets/interactions.json');
-      final data = await json.decode(response) as List;
+      final data = json.decode(response) as List;
       _interactions = data.map((e) => DrugInteraction.fromJson(e)).toList();
     } catch (e) {
-      debugPrint("Ошибка загрузки JSON: $e");
+      debugPrint("Ошибка загрузки JSON несовместимости: $e");
     }
   }
 
-  // Проверка через потоки/логику Combine-подобного подхода (Лаб. работа №4)
+  // 2. Загрузка сохраненных пользователем лекарств из локального хранилища
+  Future<void> loadMedicines() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? medicinesString = prefs.getString('saved_medicines');
+      if (medicinesString != null) {
+        final List decodedData = json.decode(medicinesString);
+        _medicines = decodedData.map((e) => Medicine.fromJson(e)).toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Ошибка чтения локальной базы: $e");
+    }
+  }
+
+  // 3. Сохранение списка лекарств в локальное хранилище
+  Future<void> _saveMedicines() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String encodedData = json.encode(_medicines.map((e) => e.toJson()).toList());
+      await prefs.setString('saved_medicines', encodedData);
+    } catch (e) {
+      debugPrint("Ошибка записи в локальную базу: $e");
+    }
+  }
+
+  // Проверка и добавление с учетом матрицы конфликтов (Лаб. работа №4)
   bool validateAndAddMedicine(Medicine newMed) {
     _warningMessage = null;
 
-    // Проверяем по матрице несовместимости
     for (var existing in _medicines) {
       for (var interaction in _interactions) {
         bool conflict = (existing.name.toLowerCase().contains(interaction.substanceA.toLowerCase()) &&
@@ -35,20 +71,23 @@ class MedicineViewModel extends ChangeNotifier {
                          newMed.name.toLowerCase().contains(interaction.substanceA.toLowerCase()));
         
         if (conflict) {
-          _warningMessage = 'Критический конфликт! ${newMed.name} несовместим с ${existing.name}: ${interaction.description}';
+          _warningMessage = 'Внимание! Конфликт: ${newMed.name} несовместим с ${existing.name}. (${interaction.description})';
           notifyListeners();
-          return false; // Блокируем добавление
+          return false; // Блокируем добавление опасного препарата
         }
       }
     }
 
     _medicines.add(newMed);
+    _saveMedicines(); // Сохраняем изменения на диск
     notifyListeners();
     return true;
   }
 
+  // Удаление лекарства
   void deleteMedicine(String id) {
     _medicines.removeWhere((med) => med.id == id);
+    _saveMedicines(); // Сохраняем изменения на диск
     notifyListeners();
   }
 }
