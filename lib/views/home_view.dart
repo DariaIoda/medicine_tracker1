@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/medicine.dart';
 import '../../viewmodels/medicine_viewmodel.dart';
+import 'add_medicine_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -73,25 +74,14 @@ class _HomeViewState extends State<HomeView> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Пример добавления препарата для демонстрации
-          bool success = _viewModel.validateAndAddMedicine(
-            Medicine(
-              id: DateTime.now().toString(),
-              name: 'Аспирин',
-              quantity: 20,
-              dosage: '500мг',
-              form: 'таблетки',
-              expiryDate: DateTime.now().add(const Duration(days: 100)),
-              instructions: 'Принимать после еды',
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddMedicineView(viewModel: _viewModel),
             ),
           );
-          if (success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Препарат успешно добавлен!')),
-            );
-          }
         },
-        child: const Icon(Icons.add),
+      child: const Icon(Icons.add),
       ),
     );
   }

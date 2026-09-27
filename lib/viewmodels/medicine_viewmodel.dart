@@ -8,9 +8,11 @@ class MedicineViewModel extends ChangeNotifier {
   List<Medicine> _medicines = [];
   List<DrugInteraction> _interactions = [];
   String? _warningMessage;
+  bool _isLoading = true;
 
   List<Medicine> get medicines => _medicines;
   String? get warningMessage => _warningMessage;
+  bool get isLoading => _isLoading;
 
   MedicineViewModel() {
     loadData();
@@ -18,8 +20,14 @@ class MedicineViewModel extends ChangeNotifier {
 
   // Комплексная инициализация при старте приложения
   Future<void> loadData() async {
+    _isLoading = true;
+    notifyListeners();
+    
     await loadInteractions();
     await loadMedicines();
+
+    _isLoading = false;
+    notifyListeners();
   }
 
   // 1. Загрузка матрицы несовместимости из статического JSON-файла (Лаб. работа №3)
@@ -41,7 +49,6 @@ class MedicineViewModel extends ChangeNotifier {
       if (medicinesString != null) {
         final List decodedData = json.decode(medicinesString);
         _medicines = decodedData.map((e) => Medicine.fromJson(e)).toList();
-        notifyListeners();
       }
     } catch (e) {
       debugPrint("Ошибка чтения локальной базы: $e");
@@ -54,6 +61,7 @@ class MedicineViewModel extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final String encodedData = json.encode(_medicines.map((e) => e.toJson()).toList());
       await prefs.setString('saved_medicines', encodedData);
+      debugPrint("Данные успешно сохранены в SharedPreferences!");
     } catch (e) {
       debugPrint("Ошибка записи в локальную базу: $e");
     }
