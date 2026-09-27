@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/medicine.dart';
 import '../../viewmodels/medicine_viewmodel.dart';
 import 'add_medicine_view.dart';
 

@@ -84,7 +84,7 @@ class _AddMedicineViewState extends State<AddMedicineView> {
               const SizedBox(height: 15),
 
               DropdownButtonFormField<String>(
-                value: _form,
+                initialValue: _form,
                 decoration: const InputDecoration(labelText: 'Форма выпуска', border: OutlineInputBorder()),
                 items: ['таблетки', 'сиропы']
                     .map((f) => DropdownMenuItem(value: f, child: Text(f)))

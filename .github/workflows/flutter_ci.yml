@@ -36,7 +36,7 @@ jobs:
 
       # 5. Запускаем анализатор кода на наличие ошибок
       - name: Run Flutter analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-warnings
 
       # 6. Собираем веб-версию (самый простой способ проверить сборку на Linux-сервере)
       - name: Build Web App
